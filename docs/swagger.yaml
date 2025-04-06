@@ -1,0 +1,238 @@
+basePath: /api
+definitions:
+  http.CreateProductRequest:
+    properties:
+      description:
+        example: Product Description
+        type: string
+      name:
+        example: Product Name
+        type: string
+      price:
+        example: 99.99
+        type: number
+    required:
+    - description
+    - name
+    - price
+    type: object
+  http.ErrorResponse:
+    properties:
+      error:
+        example: Error message
+        type: string
+    type: object
+  http.ProductResponse:
+    properties:
+      created_at:
+        example: "2024-04-06T11:22:31Z"
+        type: string
+      description:
+        example: Product Description
+        type: string
+      id:
+        example: 507f1f77bcf86cd799439011
+        type: string
+      name:
+        example: Product Name
+        type: string
+      price:
+        example: 99.99
+        type: number
+      updated_at:
+        example: "2024-04-06T11:22:31Z"
+        type: string
+    type: object
+  http.UpdateDescriptionRequest:
+    properties:
+      description:
+        example: Updated Product Description
+        type: string
+    required:
+    - description
+    type: object
+  http.UpdatePriceRequest:
+    properties:
+      price:
+        example: 149.99
+        type: number
+    required:
+    - price
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: A simple DDD API for product management
+  title: DDD API
+  version: "1.0"
+paths:
+  /products:
+    get:
+      description: Get a list of all products
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.ProductResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: List all products
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Create a new product with the provided details
+      parameters:
+      - description: Product details
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/http.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.ProductResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Create a new product
+      tags:
+      - products
+  /products/{id}:
+    delete:
+      description: Delete a product by its ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Delete a product
+      tags:
+      - products
+    get:
+      description: Get a product by its ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.ProductResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Get a product by ID
+      tags:
+      - products
+  /products/{id}/description:
+    put:
+      consumes:
+      - application/json
+      description: Update the description of a product
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New description
+        in: body
+        name: description
+        required: true
+        schema:
+          $ref: '#/definitions/http.UpdateDescriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Update product description
+      tags:
+      - products
+  /products/{id}/price:
+    put:
+      consumes:
+      - application/json
+      description: Update the price of a product
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New price
+        in: body
+        name: price
+        required: true
+        schema:
+          $ref: '#/definitions/http.UpdatePriceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      summary: Update product price
+      tags:
+      - products
+swagger: "2.0"
