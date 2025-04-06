@@ -9,6 +9,7 @@ A simple Domain-Driven Design (DDD) API for product management built with Go.
 - Swagger API documentation
 - Docker support
 - Clean architecture with DDD principles
+- Prometheus metrics
 
 ## Getting Started
 
@@ -39,6 +40,18 @@ docker run -d -p 8091:8080 --name ddd-container --link mongodb:mongodb -e MONGO_
 
 Swagger UI is available at: http://localhost:8091/swagger/index.html
 
+### Metrics
+
+Prometheus metrics are available at: http://localhost:8091/metrics
+
+Available metrics:
+- `http_requests_total`: Total number of HTTP requests
+- `http_request_duration_seconds`: Duration of HTTP requests
+- `product_operations_total`: Total number of product operations
+- `product_operation_duration_seconds`: Duration of product operations
+- `mongodb_operations_total`: Total number of MongoDB operations
+- `mongodb_operation_duration_seconds`: Duration of MongoDB operations
+
 ### API Endpoints
 
 - `POST /api/products` - Create a new product
@@ -61,10 +74,11 @@ Swagger UI is available at: http://localhost:8091/swagger/index.html
 │   │   └── product/
 │   ├── infrastructure/
 │   │   ├── config/
-│   ├── infrastructure/
+│   │   ├── metrics/
 │   │   └── mongodb/
 │   └── interfaces/
 │       └── http/
+│           └── middleware/
 ├── docs/
 │   ├── docs.go
 │   ├── swagger.json

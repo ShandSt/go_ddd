@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -21,6 +22,7 @@ import (
 	"github.com/stasshander/ddd/internal/infrastructure/config"
 	"github.com/stasshander/ddd/internal/infrastructure/mongodb"
 	httphandler "github.com/stasshander/ddd/internal/interfaces/http"
+	"github.com/stasshander/ddd/internal/interfaces/http/middleware"
 )
 
 // @title           DDD API
@@ -50,7 +52,6 @@ func main() {
 
 	router := gin.Default()
 
-	// Initialize Swagger
 	docs.SwaggerInfo.Title = "DDD API"
 	docs.SwaggerInfo.Description = "A simple DDD API for product management"
 	docs.SwaggerInfo.Version = "1.0"
@@ -67,7 +68,11 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	router.Use(middleware.MetricsMiddleware())
+
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	api := router.Group("/api")
 	{

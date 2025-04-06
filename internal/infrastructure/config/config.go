@@ -7,7 +7,6 @@ import (
 )
 
 type Config struct {
-	// Server configuration
 	ServerPort        int
 	ServerHost        string
 	ReadTimeout       time.Duration
