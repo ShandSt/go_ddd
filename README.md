@@ -1,83 +1,79 @@
-# DDD Project
+# DDD Product Management API
 
-A simple Domain-Driven Design (DDD) project in Go.
+A simple Domain-Driven Design (DDD) API for product management built with Go.
 
 ## Features
 
-- Clean Architecture
-- Domain-Driven Design
-- MongoDB Integration
-- RESTful API
-- Swagger Documentation
-- Docker Support
+- Product management (CRUD operations)
+- MongoDB integration
+- Swagger API documentation
+- Docker support
+- Clean architecture with DDD principles
 
-## Prerequisites
+## Getting Started
+
+### Prerequisites
 
 - Go 1.21 or higher
+- Docker and Docker Compose
 - MongoDB
-- Docker (optional)
 
-## Installation
+### Running with Docker
 
-1. Clone the repository:
+1. Build the Docker image:
 ```bash
-git clone git@github.com:ShandSt/ddd.git
-cd ddd
+docker build -t ddd-app .
 ```
 
-2. Install dependencies:
+2. Run MongoDB:
 ```bash
-go mod download
+docker run -d -p 27017:27017 --name mongodb mongo:latest
 ```
 
-3. Configure environment variables:
+3. Run the application:
 ```bash
-cp .env.example .env
+docker run -d -p 8091:8080 --name ddd-container --link mongodb:mongodb -e MONGO_URI=mongodb://mongodb:27017 -e MONGO_DATABASE=products ddd-app
 ```
 
-4. Run the application:
-```bash
-make run
+### API Documentation
+
+Swagger UI is available at: http://localhost:8091/swagger/index.html
+
+### API Endpoints
+
+- `POST /api/products` - Create a new product
+- `GET /api/products/:id` - Get a product by ID
+- `PUT /api/products/:id/price` - Update product price
+- `PUT /api/products/:id/description` - Update product description
+- `DELETE /api/products/:id` - Delete a product
+- `GET /api/products` - List all products
+
+## Project Structure
+
+```
+.
+├── cmd/
+│   └── main.go
+├── internal/
+│   ├── application/
+│   │   └── product/
+│   ├── domain/
+│   │   └── product/
+│   ├── infrastructure/
+│   │   ├── config/
+│   ├── infrastructure/
+│   │   └── mongodb/
+│   └── interfaces/
+│       └── http/
+├── docs/
+│   ├── docs.go
+│   ├── swagger.json
+│   └── swagger.yaml
+├── Dockerfile
+├── go.mod
+└── go.sum
 ```
 
-## Docker
+## License
 
-Build and run with Docker:
-```bash
-make docker-build
-make docker-run
-```
-
-## API Documentation
-
-Swagger documentation is available at:
-```
-http://localhost:8080/swagger/index.html
-```
-
-## Environment Variables
-
-- SERVER_PORT: Server port (default: 8080)
-- SERVER_HOST: Server host (default: localhost)
-- READ_TIMEOUT: Read timeout (default: 10s)
-- WRITE_TIMEOUT: Write timeout (default: 10s)
-- IDLE_TIMEOUT: Idle timeout (default: 120s)
-- READ_HEADER_TIMEOUT: Read header timeout (default: 5s)
-- MONGO_URI: MongoDB connection URI (default: mongodb://localhost:27017)
-- MONGO_DATABASE: MongoDB database name (default: ddd)
-- API_TOKEN: API authentication token (default: changethis)
-- BIND_ADDRESS: Server bind address (default: localhost:8080)
-
-## Testing
-
-Run tests:
-```bash
-make test
-```
-
-## Linting
-
-Run linter:
-```bash
-make lint
-``` 
+This project is licensed under the MIT License. 
