@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// @Description Product entity
 type Product struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Name        string             `bson:"name" json:"name"`
@@ -16,8 +15,19 @@ type Product struct {
 	UpdatedAt   time.Time          `bson:"updated_at" json:"updated_at"`
 }
 
-// NewProduct creates a new product with the given parameters
-func NewProduct(name, description string, price float64) *Product {
+func NewProduct(name, description string, price float64) (*Product, error) {
+	if name == "" {
+		return nil, ErrInvalidName
+	}
+
+	if description == "" {
+		return nil, ErrInvalidDescription
+	}
+
+	if price <= 0 {
+		return nil, ErrInvalidPrice
+	}
+
 	now := time.Now()
 	return &Product{
 		ID:          primitive.NewObjectID(),
@@ -26,17 +36,25 @@ func NewProduct(name, description string, price float64) *Product {
 		Price:       price,
 		CreatedAt:   now,
 		UpdatedAt:   now,
-	}
+	}, nil
 }
 
-// UpdatePrice updates the product price
-func (p *Product) UpdatePrice(price float64) {
+func (p *Product) UpdatePrice(price float64) error {
+	if price <= 0 {
+		return ErrInvalidPrice
+	}
+
 	p.Price = price
 	p.UpdatedAt = time.Now()
+	return nil
 }
 
-// UpdateDescription updates the product description
-func (p *Product) UpdateDescription(description string) {
+func (p *Product) UpdateDescription(description string) error {
+	if description == "" {
+		return ErrInvalidDescription
+	}
+
 	p.Description = description
 	p.UpdatedAt = time.Now()
+	return nil
 }

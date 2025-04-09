@@ -322,8 +322,14 @@ func TestListProducts(t *testing.T) {
 		{
 			name: "list multiple products",
 			setup: func(s *Service) int {
-				s.CreateProduct(context.Background(), "Test Product 1", "Test Description 1", 10.0)
-				s.CreateProduct(context.Background(), "Test Product 2", "Test Description 2", 20.0)
+				_, err := s.CreateProduct(context.Background(), "Test Product 1", "Test Description 1", 10.0)
+				if err != nil {
+					return 0
+				}
+				_, err = s.CreateProduct(context.Background(), "Test Product 2", "Test Description 2", 20.0)
+				if err != nil {
+					return 1
+				}
 				return 2
 			},
 			wantCount: 2,

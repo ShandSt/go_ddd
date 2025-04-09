@@ -357,17 +357,24 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "localhost:8091",
 	BasePath:         "/api",
-	Schemes:          []string{},
-	Title:            "DDD Product Management API",
-	Description:      "A simple Domain-Driven Design API for product management.",
+	Schemes:          []string{"http"},
+	Title:            "DDD Product Store API",
+	Description:      "A Go-based REST API for managing products and stores, built using Domain-Driven Design principles.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

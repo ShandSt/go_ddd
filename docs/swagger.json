@@ -1,12 +1,15 @@
 {
+    "schemes": [
+        "http"
+    ],
     "swagger": "2.0",
     "info": {
-        "description": "A simple Domain-Driven Design API for product management.",
-        "title": "DDD Product Management API",
+        "description": "A Go-based REST API for managing products and stores, built using Domain-Driven Design principles.",
+        "title": "DDD Product Store API",
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:8080",
+    "host": "localhost:8091",
     "basePath": "/api",
     "paths": {
         "/products": {
@@ -350,6 +353,13 @@
                     "example": 149.99
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }

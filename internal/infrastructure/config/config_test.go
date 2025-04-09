@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func TestLoadConfig(t *testing.T) {
+func TestLoad(t *testing.T) {
 	tests := []struct {
 		name           string
 		envVars        map[string]string
@@ -26,15 +26,21 @@ func TestLoadConfig(t *testing.T) {
 				"API_TOKEN":           "",
 			},
 			expectedConfig: &Config{
-				ServerPort:        8091,
-				ServerHost:        "localhost",
-				ReadTimeout:       10 * time.Second,
-				WriteTimeout:      10 * time.Second,
-				IdleTimeout:       60 * time.Second,
-				ReadHeaderTimeout: 2 * time.Second,
-				MongoURI:          "mongodb://localhost:27017",
-				MongoDBName:       "products",
-				APIToken:          "",
+				Server: ServerConfig{
+					Host:              "localhost",
+					Port:              "8091",
+					ReadTimeout:       10 * time.Second,
+					WriteTimeout:      10 * time.Second,
+					IdleTimeout:       60 * time.Second,
+					ReadHeaderTimeout: 2 * time.Second,
+				},
+				MongoDB: MongoDBConfig{
+					URI:      "mongodb://localhost:27017",
+					Database: "products",
+				},
+				API: APIConfig{
+					Token: "",
+				},
 			},
 		},
 		{
@@ -51,22 +57,27 @@ func TestLoadConfig(t *testing.T) {
 				"API_TOKEN":           "test_token",
 			},
 			expectedConfig: &Config{
-				ServerPort:        9090,
-				ServerHost:        "0.0.0.0",
-				ReadTimeout:       20 * time.Second,
-				WriteTimeout:      20 * time.Second,
-				IdleTimeout:       120 * time.Second,
-				ReadHeaderTimeout: 5 * time.Second,
-				MongoURI:          "mongodb://custom:27017",
-				MongoDBName:       "custom_db",
-				APIToken:          "test_token",
+				Server: ServerConfig{
+					Host:              "0.0.0.0",
+					Port:              "9090",
+					ReadTimeout:       20 * time.Second,
+					WriteTimeout:      20 * time.Second,
+					IdleTimeout:       120 * time.Second,
+					ReadHeaderTimeout: 5 * time.Second,
+				},
+				MongoDB: MongoDBConfig{
+					URI:      "mongodb://custom:27017",
+					Database: "custom_db",
+				},
+				API: APIConfig{
+					Token: "test_token",
+				},
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set environment variables
 			for k, v := range tt.envVars {
 				if v == "" {
 					os.Unsetenv(k)
@@ -75,36 +86,37 @@ func TestLoadConfig(t *testing.T) {
 				}
 			}
 
-			// Load config
-			config := LoadConfig()
+			config, err := Load()
+			if err != nil {
+				t.Fatalf("Load() error = %v", err)
+			}
 
-			// Check values
-			if config.ServerPort != tt.expectedConfig.ServerPort {
-				t.Errorf("Expected ServerPort %d, got %d", tt.expectedConfig.ServerPort, config.ServerPort)
+			if config.Server.Host != tt.expectedConfig.Server.Host {
+				t.Errorf("Expected Server.Host %s, got %s", tt.expectedConfig.Server.Host, config.Server.Host)
 			}
-			if config.ServerHost != tt.expectedConfig.ServerHost {
-				t.Errorf("Expected ServerHost %s, got %s", tt.expectedConfig.ServerHost, config.ServerHost)
+			if config.Server.Port != tt.expectedConfig.Server.Port {
+				t.Errorf("Expected Server.Port %s, got %s", tt.expectedConfig.Server.Port, config.Server.Port)
 			}
-			if config.ReadTimeout != tt.expectedConfig.ReadTimeout {
-				t.Errorf("Expected ReadTimeout %v, got %v", tt.expectedConfig.ReadTimeout, config.ReadTimeout)
+			if config.Server.ReadTimeout != tt.expectedConfig.Server.ReadTimeout {
+				t.Errorf("Expected Server.ReadTimeout %v, got %v", tt.expectedConfig.Server.ReadTimeout, config.Server.ReadTimeout)
 			}
-			if config.WriteTimeout != tt.expectedConfig.WriteTimeout {
-				t.Errorf("Expected WriteTimeout %v, got %v", tt.expectedConfig.WriteTimeout, config.WriteTimeout)
+			if config.Server.WriteTimeout != tt.expectedConfig.Server.WriteTimeout {
+				t.Errorf("Expected Server.WriteTimeout %v, got %v", tt.expectedConfig.Server.WriteTimeout, config.Server.WriteTimeout)
 			}
-			if config.IdleTimeout != tt.expectedConfig.IdleTimeout {
-				t.Errorf("Expected IdleTimeout %v, got %v", tt.expectedConfig.IdleTimeout, config.IdleTimeout)
+			if config.Server.IdleTimeout != tt.expectedConfig.Server.IdleTimeout {
+				t.Errorf("Expected Server.IdleTimeout %v, got %v", tt.expectedConfig.Server.IdleTimeout, config.Server.IdleTimeout)
 			}
-			if config.ReadHeaderTimeout != tt.expectedConfig.ReadHeaderTimeout {
-				t.Errorf("Expected ReadHeaderTimeout %v, got %v", tt.expectedConfig.ReadHeaderTimeout, config.ReadHeaderTimeout)
+			if config.Server.ReadHeaderTimeout != tt.expectedConfig.Server.ReadHeaderTimeout {
+				t.Errorf("Expected Server.ReadHeaderTimeout %v, got %v", tt.expectedConfig.Server.ReadHeaderTimeout, config.Server.ReadHeaderTimeout)
 			}
-			if config.MongoURI != tt.expectedConfig.MongoURI {
-				t.Errorf("Expected MongoURI %s, got %s", tt.expectedConfig.MongoURI, config.MongoURI)
+			if config.MongoDB.URI != tt.expectedConfig.MongoDB.URI {
+				t.Errorf("Expected MongoDB.URI %s, got %s", tt.expectedConfig.MongoDB.URI, config.MongoDB.URI)
 			}
-			if config.MongoDBName != tt.expectedConfig.MongoDBName {
-				t.Errorf("Expected MongoDBName %s, got %s", tt.expectedConfig.MongoDBName, config.MongoDBName)
+			if config.MongoDB.Database != tt.expectedConfig.MongoDB.Database {
+				t.Errorf("Expected MongoDB.Database %s, got %s", tt.expectedConfig.MongoDB.Database, config.MongoDB.Database)
 			}
-			if config.APIToken != tt.expectedConfig.APIToken {
-				t.Errorf("Expected APIToken %s, got %s", tt.expectedConfig.APIToken, config.APIToken)
+			if config.API.Token != tt.expectedConfig.API.Token {
+				t.Errorf("Expected API.Token %s, got %s", tt.expectedConfig.API.Token, config.API.Token)
 			}
 		})
 	}
@@ -137,13 +149,13 @@ func TestGetEnv(t *testing.T) {
 	}
 }
 
-func TestGetEnvAsDuration(t *testing.T) {
+func TestGetDurationEnv(t *testing.T) {
 	key := "TEST_DURATION"
 	originalValue := os.Getenv(key)
 
 	t.Run("valid duration", func(t *testing.T) {
 		os.Setenv(key, "5s")
-		duration := getEnvAsDuration(key, 10*time.Second)
+		duration := getDurationEnv(key, 10*time.Second)
 		if duration != 5*time.Second {
 			t.Errorf("Expected 5s, got %s", duration)
 		}
@@ -151,7 +163,7 @@ func TestGetEnvAsDuration(t *testing.T) {
 
 	t.Run("invalid duration", func(t *testing.T) {
 		os.Setenv(key, "invalid")
-		duration := getEnvAsDuration(key, 10*time.Second)
+		duration := getDurationEnv(key, 10*time.Second)
 		if duration != 10*time.Second {
 			t.Errorf("Expected 10s, got %s", duration)
 		}
@@ -159,7 +171,7 @@ func TestGetEnvAsDuration(t *testing.T) {
 
 	t.Run("no value", func(t *testing.T) {
 		os.Unsetenv(key)
-		duration := getEnvAsDuration(key, 10*time.Second)
+		duration := getDurationEnv(key, 10*time.Second)
 		if duration != 10*time.Second {
 			t.Errorf("Expected 10s, got %s", duration)
 		}
@@ -172,13 +184,13 @@ func TestGetEnvAsDuration(t *testing.T) {
 	}
 }
 
-func TestGetEnvAsInt(t *testing.T) {
+func TestGetIntEnv(t *testing.T) {
 	key := "TEST_INT"
 	originalValue := os.Getenv(key)
 
 	t.Run("valid integer", func(t *testing.T) {
 		os.Setenv(key, "42")
-		value := getEnvAsInt(key, 10)
+		value := getIntEnv(key, 10)
 		if value != 42 {
 			t.Errorf("Expected 42, got %d", value)
 		}
@@ -186,7 +198,7 @@ func TestGetEnvAsInt(t *testing.T) {
 
 	t.Run("invalid integer", func(t *testing.T) {
 		os.Setenv(key, "invalid")
-		value := getEnvAsInt(key, 10)
+		value := getIntEnv(key, 10)
 		if value != 10 {
 			t.Errorf("Expected 10, got %d", value)
 		}
@@ -194,7 +206,7 @@ func TestGetEnvAsInt(t *testing.T) {
 
 	t.Run("no value", func(t *testing.T) {
 		os.Unsetenv(key)
-		value := getEnvAsInt(key, 10)
+		value := getIntEnv(key, 10)
 		if value != 10 {
 			t.Errorf("Expected 10, got %d", value)
 		}
@@ -207,13 +219,13 @@ func TestGetEnvAsInt(t *testing.T) {
 	}
 }
 
-func TestGetEnvAsBool(t *testing.T) {
+func TestGetBoolEnv(t *testing.T) {
 	key := "TEST_BOOL"
 	originalValue := os.Getenv(key)
 
 	t.Run("valid boolean", func(t *testing.T) {
 		os.Setenv(key, "true")
-		value := getEnvAsBool(key, false)
+		value := getBoolEnv(key, false)
 		if !value {
 			t.Error("Expected true, got false")
 		}
@@ -221,7 +233,7 @@ func TestGetEnvAsBool(t *testing.T) {
 
 	t.Run("invalid boolean", func(t *testing.T) {
 		os.Setenv(key, "invalid")
-		value := getEnvAsBool(key, true)
+		value := getBoolEnv(key, true)
 		if !value {
 			t.Error("Expected true, got false")
 		}
@@ -229,7 +241,7 @@ func TestGetEnvAsBool(t *testing.T) {
 
 	t.Run("no value", func(t *testing.T) {
 		os.Unsetenv(key)
-		value := getEnvAsBool(key, true)
+		value := getBoolEnv(key, true)
 		if !value {
 			t.Error("Expected true, got false")
 		}
@@ -244,8 +256,10 @@ func TestGetEnvAsBool(t *testing.T) {
 
 func TestBindAddress(t *testing.T) {
 	config := &Config{
-		ServerHost: "localhost",
-		ServerPort: 8080,
+		Server: ServerConfig{
+			Host: "localhost",
+			Port: "8080",
+		},
 	}
 
 	expected := "localhost:8080"

@@ -59,11 +59,12 @@ definitions:
     required:
     - price
     type: object
-host: localhost:8080
+host: localhost:8091
 info:
   contact: {}
-  description: A simple Domain-Driven Design API for product management.
-  title: DDD Product Management API
+  description: A Go-based REST API for managing products and stores, built using Domain-Driven
+    Design principles.
+  title: DDD Product Store API
   version: "1.0"
 paths:
   /products:
@@ -235,4 +236,11 @@ paths:
       summary: Update product price
       tags:
       - products
+schemes:
+- http
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

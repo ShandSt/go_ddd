@@ -4,98 +4,91 @@ import (
 	"context"
 
 	"github.com/stasshander/ddd/internal/domain/store"
+	"github.com/stasshander/ddd/internal/infrastructure/mongodb"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Service interface {
-	Create(ctx context.Context, store *store.Store) error
-	GetByID(ctx context.Context, id string) (*store.Store, error)
-	UpdateName(ctx context.Context, id, name string) (*store.Store, error)
-	UpdateAddress(ctx context.Context, id, address string) (*store.Store, error)
-	Delete(ctx context.Context, id string) error
-	List(ctx context.Context, page, limit int) ([]*store.Store, int, error)
-	AddProduct(ctx context.Context, storeID string, productID primitive.ObjectID) (*store.Store, error)
-	RemoveProduct(ctx context.Context, storeID string, productID primitive.ObjectID) (*store.Store, error)
+type Service struct {
+	repo *mongodb.StoreRepository
 }
 
-type service struct {
-	repo store.Repository
-}
-
-func NewService(repo store.Repository) Service {
-	return &service{
+func NewService(repo *mongodb.StoreRepository) *Service {
+	return &Service{
 		repo: repo,
 	}
 }
 
-func (s *service) Create(ctx context.Context, store *store.Store) error {
-	return s.repo.Create(ctx, store)
+func (s *Service) CreateStore(ctx context.Context, name, address string) (*store.Store, error) {
+	store, err := store.NewStore(name, address)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.Create(ctx, store); err != nil {
+		return nil, err
+	}
+	return store, nil
 }
 
-func (s *service) GetByID(ctx context.Context, id string) (*store.Store, error) {
+func (s *Service) GetStore(ctx context.Context, id string) (*store.Store, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *service) UpdateName(ctx context.Context, id, name string) (*store.Store, error) {
+func (s *Service) UpdateStoreName(ctx context.Context, id, name string) error {
 	store, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	store.UpdateName(name)
-	if err := s.repo.Update(ctx, store); err != nil {
-		return nil, err
+	if err := store.UpdateName(name); err != nil {
+		return err
 	}
 
-	return store, nil
+	return s.repo.Update(ctx, store)
 }
 
-func (s *service) UpdateAddress(ctx context.Context, id, address string) (*store.Store, error) {
+func (s *Service) UpdateStoreAddress(ctx context.Context, id, address string) error {
 	store, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	store.UpdateAddress(address)
-	if err := s.repo.Update(ctx, store); err != nil {
-		return nil, err
+	if err := store.UpdateAddress(address); err != nil {
+		return err
 	}
 
-	return store, nil
+	return s.repo.Update(ctx, store)
 }
 
-func (s *service) Delete(ctx context.Context, id string) error {
+func (s *Service) DeleteStore(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *service) List(ctx context.Context, page, limit int) ([]*store.Store, int, error) {
+func (s *Service) ListStores(ctx context.Context, page, limit int) ([]*store.Store, int, error) {
 	return s.repo.List(ctx, page, limit)
 }
 
-func (s *service) AddProduct(ctx context.Context, storeID string, productID primitive.ObjectID) (*store.Store, error) {
+func (s *Service) AddProductToStore(ctx context.Context, storeID string, productID primitive.ObjectID) error {
 	store, err := s.repo.GetByID(ctx, storeID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	store.AddProduct(productID)
-	if err := s.repo.Update(ctx, store); err != nil {
-		return nil, err
+	if err := store.AddProduct(productID); err != nil {
+		return err
 	}
 
-	return store, nil
+	return s.repo.Update(ctx, store)
 }
 
-func (s *service) RemoveProduct(ctx context.Context, storeID string, productID primitive.ObjectID) (*store.Store, error) {
+func (s *Service) RemoveProductFromStore(ctx context.Context, storeID string, productID primitive.ObjectID) error {
 	store, err := s.repo.GetByID(ctx, storeID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	store.RemoveProduct(productID)
-	if err := s.repo.Update(ctx, store); err != nil {
-		return nil, err
+	if err := store.RemoveProduct(productID); err != nil {
+		return err
 	}
 
-	return store, nil
+	return s.repo.Update(ctx, store)
 }

@@ -28,8 +28,13 @@ func NewStoreRepository(client *mongo.Client, databaseName string) *StoreReposit
 }
 
 func (r *StoreRepository) Create(ctx context.Context, s *store.Store) error {
-	_, err := r.collection.InsertOne(ctx, s)
-	return err
+	result, err := r.collection.InsertOne(ctx, s)
+	if err != nil {
+		return err
+	}
+
+	s.ID = result.InsertedID.(primitive.ObjectID)
+	return nil
 }
 
 func (r *StoreRepository) GetByID(ctx context.Context, id string) (*store.Store, error) {
@@ -51,7 +56,7 @@ func (r *StoreRepository) GetByID(ctx context.Context, id string) (*store.Store,
 }
 
 func (r *StoreRepository) Update(ctx context.Context, s *store.Store) error {
-	objectID, err := primitive.ObjectIDFromHex(s.ID)
+	objectID, err := primitive.ObjectIDFromHex(s.ID.Hex())
 	if err != nil {
 		return err
 	}

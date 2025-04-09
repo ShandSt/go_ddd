@@ -8,7 +8,6 @@ import (
 )
 
 var (
-	// HTTPRequestsTotal tracks the total number of HTTP requests
 	HTTPRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
@@ -17,7 +16,6 @@ var (
 		[]string{"method", "path", "status"},
 	)
 
-	// HTTPRequestDuration tracks the duration of HTTP requests
 	HTTPRequestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "http_request_duration_seconds",
@@ -27,16 +25,14 @@ var (
 		[]string{"method", "path"},
 	)
 
-	// ProductOperationsTotal tracks the total number of product operations
 	ProductOperationsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "product_operations_total",
 			Help: "Total number of product operations",
 		},
-		[]string{"operation"},
+		[]string{"operation", "status"},
 	)
 
-	// ProductOperationDuration tracks the duration of product operations
 	ProductOperationDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "product_operation_duration_seconds",
@@ -46,7 +42,6 @@ var (
 		[]string{"operation"},
 	)
 
-	// MongoDBOperationsTotal tracks the total number of MongoDB operations
 	MongoDBOperationsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "mongodb_operations_total",
@@ -55,7 +50,6 @@ var (
 		[]string{"operation"},
 	)
 
-	// MongoDBOperationDuration tracks the duration of MongoDB operations
 	MongoDBOperationDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "mongodb_operation_duration_seconds",
@@ -67,7 +61,6 @@ var (
 )
 
 func init() {
-	// Register metrics with Prometheus
 	prometheus.MustRegister(HTTPRequestsTotal)
 	prometheus.MustRegister(HTTPRequestDuration)
 	prometheus.MustRegister(ProductOperationsTotal)
@@ -76,7 +69,6 @@ func init() {
 	prometheus.MustRegister(MongoDBOperationDuration)
 }
 
-// Handler returns an HTTP handler for the Prometheus metrics
 func Handler() http.Handler {
 	return promhttp.Handler()
 }

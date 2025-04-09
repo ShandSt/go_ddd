@@ -4,17 +4,17 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stasshander/ddd/internal/application/store"
-	"github.com/stasshander/ddd/internal/domain/store"
+	appstore "github.com/stasshander/ddd/internal/application/store"
+	domainstore "github.com/stasshander/ddd/internal/domain/store"
 	"github.com/stasshander/ddd/internal/interfaces/http/response"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type StoreHandler struct {
-	service store.Service
+	service *appstore.Service
 }
 
-func NewStoreHandler(service store.Service) *StoreHandler {
+func NewStoreHandler(service *appstore.Service) *StoreHandler {
 	return &StoreHandler{
 		service: service,
 	}
@@ -32,20 +32,20 @@ func (h *StoreHandler) CreateStore(c *gin.Context) {
 		return
 	}
 
-	store := store.NewStore(req.Name, req.Address)
-	if err := h.service.Create(c.Request.Context(), store); err != nil {
+	store, err := h.service.CreateStore(c.Request.Context(), req.Name, req.Address)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusCreated, response.NewSimpleResponse(http.StatusCreated, "Store created successfully", store))
+	c.JSON(http.StatusCreated, response.NewSimpleResponse(store))
 }
 
 func (h *StoreHandler) GetStore(c *gin.Context) {
 	id := c.Param("id")
-	store, err := h.service.GetByID(c.Request.Context(), id)
+	store, err := h.service.GetStore(c.Request.Context(), id)
 	if err != nil {
-		if err == store.ErrStoreNotFound {
+		if err == domainstore.ErrStoreNotFound {
 			c.JSON(http.StatusNotFound, response.NewErrorResponse(http.StatusNotFound, err.Error()))
 			return
 		}
@@ -53,7 +53,7 @@ func (h *StoreHandler) GetStore(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSimpleResponse(http.StatusOK, "Store retrieved successfully", store))
+	c.JSON(http.StatusOK, response.NewSimpleResponse(store))
 }
 
 type UpdateStoreNameRequest struct {
@@ -68,9 +68,8 @@ func (h *StoreHandler) UpdateStoreName(c *gin.Context) {
 		return
 	}
 
-	store, err := h.service.UpdateName(c.Request.Context(), id, req.Name)
-	if err != nil {
-		if err == store.ErrStoreNotFound {
+	if err := h.service.UpdateStoreName(c.Request.Context(), id, req.Name); err != nil {
+		if err == domainstore.ErrStoreNotFound {
 			c.JSON(http.StatusNotFound, response.NewErrorResponse(http.StatusNotFound, err.Error()))
 			return
 		}
@@ -78,7 +77,13 @@ func (h *StoreHandler) UpdateStoreName(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSimpleResponse(http.StatusOK, "Store name updated successfully", store))
+	store, err := h.service.GetStore(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, response.NewSimpleResponse(store))
 }
 
 type UpdateStoreAddressRequest struct {
@@ -93,9 +98,8 @@ func (h *StoreHandler) UpdateStoreAddress(c *gin.Context) {
 		return
 	}
 
-	store, err := h.service.UpdateAddress(c.Request.Context(), id, req.Address)
-	if err != nil {
-		if err == store.ErrStoreNotFound {
+	if err := h.service.UpdateStoreAddress(c.Request.Context(), id, req.Address); err != nil {
+		if err == domainstore.ErrStoreNotFound {
 			c.JSON(http.StatusNotFound, response.NewErrorResponse(http.StatusNotFound, err.Error()))
 			return
 		}
@@ -103,13 +107,19 @@ func (h *StoreHandler) UpdateStoreAddress(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSimpleResponse(http.StatusOK, "Store address updated successfully", store))
+	store, err := h.service.GetStore(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, response.NewSimpleResponse(store))
 }
 
 func (h *StoreHandler) DeleteStore(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		if err == store.ErrStoreNotFound {
+	if err := h.service.DeleteStore(c.Request.Context(), id); err != nil {
+		if err == domainstore.ErrStoreNotFound {
 			c.JSON(http.StatusNotFound, response.NewErrorResponse(http.StatusNotFound, err.Error()))
 			return
 		}
@@ -117,20 +127,25 @@ func (h *StoreHandler) DeleteStore(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSimpleResponse(http.StatusOK, "Store deleted successfully", nil))
+	c.JSON(http.StatusOK, response.NewSimpleResponse[any](nil))
 }
 
 func (h *StoreHandler) ListStores(c *gin.Context) {
 	page := 1
 	limit := 10
 
-	stores, total, err := h.service.List(c.Request.Context(), page, limit)
+	stores, total, err := h.service.ListStores(c.Request.Context(), page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewPaginatedResponse(http.StatusOK, "Stores retrieved successfully", stores, total, page, limit))
+	pagination := &response.Pagination{
+		Page:     page,
+		PageSize: limit,
+	}
+
+	c.JSON(http.StatusOK, response.NewPaginatedResponse(stores, pagination, total))
 }
 
 type AddProductRequest struct {
@@ -151,9 +166,8 @@ func (h *StoreHandler) AddProductToStore(c *gin.Context) {
 		return
 	}
 
-	store, err := h.service.AddProduct(c.Request.Context(), storeID, productID)
-	if err != nil {
-		if err == store.ErrStoreNotFound {
+	if err := h.service.AddProductToStore(c.Request.Context(), storeID, productID); err != nil {
+		if err == domainstore.ErrStoreNotFound {
 			c.JSON(http.StatusNotFound, response.NewErrorResponse(http.StatusNotFound, err.Error()))
 			return
 		}
@@ -161,7 +175,13 @@ func (h *StoreHandler) AddProductToStore(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSimpleResponse(http.StatusOK, "Product added to store successfully", store))
+	store, err := h.service.GetStore(c.Request.Context(), storeID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, response.NewSimpleResponse(store))
 }
 
 func (h *StoreHandler) RemoveProductFromStore(c *gin.Context) {
@@ -174,9 +194,8 @@ func (h *StoreHandler) RemoveProductFromStore(c *gin.Context) {
 		return
 	}
 
-	store, err := h.service.RemoveProduct(c.Request.Context(), storeID, productID)
-	if err != nil {
-		if err == store.ErrStoreNotFound {
+	if err := h.service.RemoveProductFromStore(c.Request.Context(), storeID, productID); err != nil {
+		if err == domainstore.ErrStoreNotFound {
 			c.JSON(http.StatusNotFound, response.NewErrorResponse(http.StatusNotFound, err.Error()))
 			return
 		}
@@ -184,5 +203,11 @@ func (h *StoreHandler) RemoveProductFromStore(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.NewSimpleResponse(http.StatusOK, "Product removed from store successfully", store))
+	store, err := h.service.GetStore(c.Request.Context(), storeID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, response.NewSimpleResponse(store))
 }
