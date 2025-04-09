@@ -2,23 +2,29 @@ package mongodb
 
 import (
 	"context"
-	// "time"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/stasshander/ddd/internal/domain/product"
 	// "github.com/stasshander/ddd/internal/infrastructure/metrics"
 )
 
 type ProductRepository struct {
-	collection *mongo.Collection
+	client       *mongo.Client
+	databaseName string
+	collection   *mongo.Collection
 }
 
-func NewProductRepository(db *mongo.Database) *ProductRepository {
+func NewProductRepository(client *mongo.Client, databaseName string) *ProductRepository {
+	collection := client.Database(databaseName).Collection("products")
 	return &ProductRepository{
-		collection: db.Collection("products"),
+		client:       client,
+		databaseName: databaseName,
+		collection:   collection,
 	}
 }
 
@@ -45,13 +51,13 @@ func (r *ProductRepository) Create(ctx context.Context, p *product.Product) erro
 func (r *ProductRepository) GetByID(ctx context.Context, id string) (*product.Product, error) {
 	// start := time.Now()
 
+	var p product.Product
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		// metrics.MongoDBOperationsTotal.WithLabelValues("get_by_id", "error").Inc()
 		return nil, err
 	}
 
-	var p product.Product
 	err = r.collection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&p)
 
 	// duration := time.Since(start).Seconds()
@@ -74,15 +80,31 @@ func (r *ProductRepository) GetByID(ctx context.Context, id string) (*product.Pr
 func (r *ProductRepository) Update(ctx context.Context, p *product.Product) error {
 	// start := time.Now()
 
-	_, err := r.collection.ReplaceOne(ctx, bson.M{"_id": p.ID}, p)
-
-	// duration := time.Since(start).Seconds()
-	// status := "success"
+	objectID, err := primitive.ObjectIDFromHex(p.ID)
 	if err != nil {
-		// status = "error"
 		return err
 	}
 
+	update := bson.M{
+		"$set": bson.M{
+			"name":        p.Name,
+			"description": p.Description,
+			"price":       p.Price,
+			"updated_at":  time.Now(),
+		},
+	}
+
+	result, err := r.collection.UpdateOne(ctx, bson.M{"_id": objectID}, update)
+	if err != nil {
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		return product.ErrProductNotFound
+	}
+
+	// duration := time.Since(start).Seconds()
+	// status := "success"
 	// metrics.MongoDBOperationsTotal.WithLabelValues("update", status).Inc()
 	// metrics.MongoDBOperationDuration.WithLabelValues("update").Observe(duration)
 
@@ -98,40 +120,61 @@ func (r *ProductRepository) Delete(ctx context.Context, id string) error {
 		return err
 	}
 
-	_, err = r.collection.DeleteOne(ctx, bson.M{"_id": objectID})
-
-	// duration := time.Since(start).Seconds()
-	// status := "success"
+	result, err := r.collection.DeleteOne(ctx, bson.M{"_id": objectID})
 	if err != nil {
 		// status = "error"
 		return err
 	}
 
+	if result.DeletedCount == 0 {
+		// metrics.MongoDBOperationsTotal.WithLabelValues("delete", "not_found").Inc()
+		return product.ErrProductNotFound
+	}
+
+	// duration := time.Since(start).Seconds()
+	// status := "success"
 	// metrics.MongoDBOperationsTotal.WithLabelValues("delete", status).Inc()
 	// metrics.MongoDBOperationDuration.WithLabelValues("delete").Observe(duration)
 
 	return nil
 }
 
-func (r *ProductRepository) List(ctx context.Context) ([]*product.Product, error) {
+func (r *ProductRepository) List(ctx context.Context, page, limit int) ([]*product.Product, int, error) {
 	// start := time.Now()
 
-	cursor, err := r.collection.Find(ctx, bson.M{})
+	var products []*product.Product
+
+	// Calculate total count
+	total, err := r.collection.CountDocuments(ctx, bson.M{})
 	if err != nil {
 		// metrics.MongoDBOperationsTotal.WithLabelValues("list", "error").Inc()
-		return nil, err
+		return nil, 0, err
+	}
+
+	// Set up pagination options
+	skip := int64((page - 1) * limit)
+	opts := options.Find().
+		SetSkip(skip).
+		SetLimit(int64(limit)).
+		SetSort(bson.D{{Key: "created_at", Value: -1}})
+
+	// Execute query
+	cursor, err := r.collection.Find(ctx, bson.M{}, opts)
+	if err != nil {
+		// metrics.MongoDBOperationsTotal.WithLabelValues("list", "error").Inc()
+		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
 
-	var products []*product.Product
-	if err := cursor.All(ctx, &products); err != nil {
+	// Decode results
+	if err = cursor.All(ctx, &products); err != nil {
 		// metrics.MongoDBOperationsTotal.WithLabelValues("list", "error").Inc()
-		return nil, err
+		return nil, 0, err
 	}
 
 	// duration := time.Since(start).Seconds()
 	// metrics.MongoDBOperationsTotal.WithLabelValues("list", "success").Inc()
 	// metrics.MongoDBOperationDuration.WithLabelValues("list").Observe(duration)
 
-	return products, nil
+	return products, int(total), nil
 }

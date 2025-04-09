@@ -1,8 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "A simple DDD API for product management",
-        "title": "DDD API",
+        "description": "A simple Domain-Driven Design API for product management.",
+        "title": "DDD Product Management API",
         "contact": {},
         "version": "1.0"
     },

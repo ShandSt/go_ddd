@@ -7,121 +7,107 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	originalEnvVars := make(map[string]string)
-	envVars := []string{
-		"SERVER_PORT",
-		"SERVER_HOST",
-		"READ_TIMEOUT",
-		"WRITE_TIMEOUT",
-		"IDLE_TIMEOUT",
-		"READ_HEADER_TIMEOUT",
-		"MONGO_URI",
-		"MONGO_DATABASE",
-		"API_TOKEN",
+	tests := []struct {
+		name           string
+		envVars        map[string]string
+		expectedConfig *Config
+	}{
+		{
+			name: "default values",
+			envVars: map[string]string{
+				"SERVER_PORT":         "",
+				"SERVER_HOST":         "",
+				"READ_TIMEOUT":        "",
+				"WRITE_TIMEOUT":       "",
+				"IDLE_TIMEOUT":        "",
+				"READ_HEADER_TIMEOUT": "",
+				"MONGO_URI":           "",
+				"MONGO_DATABASE":      "",
+				"API_TOKEN":           "",
+			},
+			expectedConfig: &Config{
+				ServerPort:        8091,
+				ServerHost:        "localhost",
+				ReadTimeout:       10 * time.Second,
+				WriteTimeout:      10 * time.Second,
+				IdleTimeout:       60 * time.Second,
+				ReadHeaderTimeout: 2 * time.Second,
+				MongoURI:          "mongodb://localhost:27017",
+				MongoDBName:       "products",
+				APIToken:          "",
+			},
+		},
+		{
+			name: "custom values",
+			envVars: map[string]string{
+				"SERVER_PORT":         "9090",
+				"SERVER_HOST":         "0.0.0.0",
+				"READ_TIMEOUT":        "20s",
+				"WRITE_TIMEOUT":       "20s",
+				"IDLE_TIMEOUT":        "120s",
+				"READ_HEADER_TIMEOUT": "5s",
+				"MONGO_URI":           "mongodb://custom:27017",
+				"MONGO_DATABASE":      "custom_db",
+				"API_TOKEN":           "test_token",
+			},
+			expectedConfig: &Config{
+				ServerPort:        9090,
+				ServerHost:        "0.0.0.0",
+				ReadTimeout:       20 * time.Second,
+				WriteTimeout:      20 * time.Second,
+				IdleTimeout:       120 * time.Second,
+				ReadHeaderTimeout: 5 * time.Second,
+				MongoURI:          "mongodb://custom:27017",
+				MongoDBName:       "custom_db",
+				APIToken:          "test_token",
+			},
+		},
 	}
 
-	for _, env := range envVars {
-		if value, exists := os.LookupEnv(env); exists {
-			originalEnvVars[env] = value
-			os.Unsetenv(env)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set environment variables
+			for k, v := range tt.envVars {
+				if v == "" {
+					os.Unsetenv(k)
+				} else {
+					os.Setenv(k, v)
+				}
+			}
+
+			// Load config
+			config := LoadConfig()
+
+			// Check values
+			if config.ServerPort != tt.expectedConfig.ServerPort {
+				t.Errorf("Expected ServerPort %d, got %d", tt.expectedConfig.ServerPort, config.ServerPort)
+			}
+			if config.ServerHost != tt.expectedConfig.ServerHost {
+				t.Errorf("Expected ServerHost %s, got %s", tt.expectedConfig.ServerHost, config.ServerHost)
+			}
+			if config.ReadTimeout != tt.expectedConfig.ReadTimeout {
+				t.Errorf("Expected ReadTimeout %v, got %v", tt.expectedConfig.ReadTimeout, config.ReadTimeout)
+			}
+			if config.WriteTimeout != tt.expectedConfig.WriteTimeout {
+				t.Errorf("Expected WriteTimeout %v, got %v", tt.expectedConfig.WriteTimeout, config.WriteTimeout)
+			}
+			if config.IdleTimeout != tt.expectedConfig.IdleTimeout {
+				t.Errorf("Expected IdleTimeout %v, got %v", tt.expectedConfig.IdleTimeout, config.IdleTimeout)
+			}
+			if config.ReadHeaderTimeout != tt.expectedConfig.ReadHeaderTimeout {
+				t.Errorf("Expected ReadHeaderTimeout %v, got %v", tt.expectedConfig.ReadHeaderTimeout, config.ReadHeaderTimeout)
+			}
+			if config.MongoURI != tt.expectedConfig.MongoURI {
+				t.Errorf("Expected MongoURI %s, got %s", tt.expectedConfig.MongoURI, config.MongoURI)
+			}
+			if config.MongoDBName != tt.expectedConfig.MongoDBName {
+				t.Errorf("Expected MongoDBName %s, got %s", tt.expectedConfig.MongoDBName, config.MongoDBName)
+			}
+			if config.APIToken != tt.expectedConfig.APIToken {
+				t.Errorf("Expected APIToken %s, got %s", tt.expectedConfig.APIToken, config.APIToken)
+			}
+		})
 	}
-
-	defer func() {
-		for key, value := range originalEnvVars {
-			os.Setenv(key, value)
-		}
-	}()
-
-	t.Run("default values", func(t *testing.T) {
-		config := LoadConfig()
-
-		if config.ServerPort != 8080 {
-			t.Errorf("Expected ServerPort 8080, got %d", config.ServerPort)
-		}
-
-		if config.ServerHost != "localhost" {
-			t.Errorf("Expected ServerHost localhost, got %s", config.ServerHost)
-		}
-
-		if config.ReadTimeout != 10*time.Second {
-			t.Errorf("Expected ReadTimeout 10s, got %s", config.ReadTimeout)
-		}
-
-		if config.WriteTimeout != 10*time.Second {
-			t.Errorf("Expected WriteTimeout 10s, got %s", config.WriteTimeout)
-		}
-
-		if config.IdleTimeout != 60*time.Second {
-			t.Errorf("Expected IdleTimeout 60s, got %s", config.IdleTimeout)
-		}
-
-		if config.ReadHeaderTimeout != 2*time.Second {
-			t.Errorf("Expected ReadHeaderTimeout 2s, got %s", config.ReadHeaderTimeout)
-		}
-
-		if config.MongoURI != "mongodb://localhost:27017" {
-			t.Errorf("Expected MongoURI mongodb://localhost:27017, got %s", config.MongoURI)
-		}
-
-		if config.MongoDBName != "products" {
-			t.Errorf("Expected MongoDBName products, got %s", config.MongoDBName)
-		}
-
-		if config.APIToken != "" {
-			t.Errorf("Expected empty APIToken, got %s", config.APIToken)
-		}
-	})
-
-	t.Run("custom values", func(t *testing.T) {
-		os.Setenv("SERVER_PORT", "3000")
-		os.Setenv("SERVER_HOST", "0.0.0.0")
-		os.Setenv("READ_TIMEOUT", "20s")
-		os.Setenv("WRITE_TIMEOUT", "20s")
-		os.Setenv("IDLE_TIMEOUT", "120s")
-		os.Setenv("READ_HEADER_TIMEOUT", "5s")
-		os.Setenv("MONGO_URI", "mongodb://localhost:27018")
-		os.Setenv("MONGO_DATABASE", "test_db")
-		os.Setenv("API_TOKEN", "test_token")
-
-		config := LoadConfig()
-
-		if config.ServerPort != 3000 {
-			t.Errorf("Expected ServerPort 3000, got %d", config.ServerPort)
-		}
-
-		if config.ServerHost != "0.0.0.0" {
-			t.Errorf("Expected ServerHost 0.0.0.0, got %s", config.ServerHost)
-		}
-
-		if config.ReadTimeout != 20*time.Second {
-			t.Errorf("Expected ReadTimeout 20s, got %s", config.ReadTimeout)
-		}
-
-		if config.WriteTimeout != 20*time.Second {
-			t.Errorf("Expected WriteTimeout 20s, got %s", config.WriteTimeout)
-		}
-
-		if config.IdleTimeout != 120*time.Second {
-			t.Errorf("Expected IdleTimeout 120s, got %s", config.IdleTimeout)
-		}
-
-		if config.ReadHeaderTimeout != 5*time.Second {
-			t.Errorf("Expected ReadHeaderTimeout 5s, got %s", config.ReadHeaderTimeout)
-		}
-
-		if config.MongoURI != "mongodb://localhost:27018" {
-			t.Errorf("Expected MongoURI mongodb://localhost:27018, got %s", config.MongoURI)
-		}
-
-		if config.MongoDBName != "test_db" {
-			t.Errorf("Expected MongoDBName test_db, got %s", config.MongoDBName)
-		}
-
-		if config.APIToken != "test_token" {
-			t.Errorf("Expected APIToken test_token, got %s", config.APIToken)
-		}
-	})
 }
 
 func TestGetEnv(t *testing.T) {
